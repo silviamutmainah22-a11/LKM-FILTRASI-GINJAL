@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Medical Investigation – Misteri Urine Berbusa</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- html2pdf.js for direct PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        medical: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="h-full bg-slate-50 text-slate-800 flex flex-col antialiased">
+
+    <!-- Custom Notification Modal / Toast -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- PIN Modal for Teacher Login -->
+    <div id="teacher-pin-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 text-center transform transition-all">
+            <div class="w-16 h-16 bg-medical-100 text-medical-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                <i class="fa-solid fa-user-shield"></i>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 mb-2">Autentikasi Guru</h3>
+            <p class="text-sm text-slate-500 mb-6">Masukkan PIN akses khusus untuk membuka Dashboard Guru (Default PIN: <code class="bg-slate-100 px-2 py-1 rounded text-medical-800 font-mono">1234</code>)</p>
+            <form id="teacher-pin-form" onsubmit="handleTeacherLogin(event)">
+                <input type="password" id="teacher-pin-input" placeholder="Masukkan 4 digit PIN" maxlength="4" required class="w-full text-center tracking-widest text-2xl py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-medical-500 focus:outline-none mb-6">
+                <div class="flex space-x-3">
+                    <button type="button" onclick="closeTeacherModal()" class="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl transition">Batal</button>
+                    <button type="submit" class="flex-1 py-3 px-4 bg-medical-600 hover:bg-medical-700 text-white font-medium rounded-xl shadow-lg shadow-medical-500/30 transition">Masuk</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Navigation Header -->
+    <header class="bg-gradient-to-r from-medical-900 via-medical-800 to-sky-900 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center border border-white/20 text-medical-100 text-2xl shadow-inner">
+                    <i class="fa-solid fa-stethoscope"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-bold tracking-tight">DIGITAL MEDICAL INVESTIGATION</h1>
+                    <p class="text-xs text-sky-200 font-medium">Misteri Urine Berbusa — Sistem Ekskresi Manusia</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="switchView('home')" id="nav-btn-home" class="px-4 py-2 text-sm font-semibold rounded-xl bg-slate-800/60 text-sky-100 hover:bg-slate-800 transition flex items-center space-x-2 border border-white/10">
+                    <i class="fa-solid fa-house"></i>
+                    <span>Beranda</span>
+                </button>
+                <button onclick="switchView('student')" id="nav-btn-student" class="px-4 py-2 text-sm font-semibold rounded-xl bg-white/20 text-white shadow-sm transition hover:bg-white/30 flex items-center space-x-2">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Dashboard Siswa</span>
+                </button>
+                <button onclick="promptTeacherLogin()" id="nav-btn-teacher" class="px-4 py-2 text-sm font-semibold rounded-xl bg-slate-800/60 text-sky-100 hover:bg-slate-800 transition flex items-center space-x-2 border border-white/10">
+                    <i class="fa-solid fa-chalkboard-user"></i>
+                    <span>Dashboard Guru</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- App Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 overflow-y-auto">
+        
+        <!-- CONNECTION STATUS BANNER -->
+        <div id="connection-banner" class="mb-6 p-3 bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl flex items-center justify-between hidden">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-triangle-exclamation text-amber-600 animate-pulse"></i>
+                <span id="connection-status-text">Menggunakan mode penyimpanan lokal (tersinkronisasi secara mandiri).</span>
+            </div>
+            <span class="text-xs uppercase font-bold tracking-wider px-2 py-0.5 bg-amber-100 rounded text-amber-900">Local Storage Active</span>
+        </div>
+
+        <!-- ================= HOME LANDING PAGE VIEW ================= -->
+        <div id="view-home" class="space-y-8 fade-in py-6">
+            <div class="bg-gradient-to-br from-medical-900 via-sky-900 to-slate-900 text-white rounded-3xl p-8 sm:p-12 shadow-xl relative overflow-hidden">
+                <div class="absolute right-0 bottom-0 opacity-10 text-9xl transform translate-x-10 translate-y-10">
+                    <i class="fa-solid fa-microscope"></i>
+                </div>
+                <div class="max-w-3xl relative z-10 space-y-6">
+                    <div class="inline-flex items-center space-x-2 bg-white/10 border border-white/20 px-3 py-1.5 rounded-full text-xs font-semibold tracking-wider uppercase text-sky-200">
+                        <i class="fa-solid fa-flask-vial"></i>
+                        <span>Lembar Kerja Murid (LKM) Interaktif</span>
+                    </div>
+                    <h2 class="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight">
+                        Pecahkan Misteri Medis Sistem Ekskresi Ginjal!
+                    </h2>
+                    <p class="text-slate-300 text-sm sm:text-base leading-relaxed text-justify">
+                        Selamat datang di portal investigasi klinis digital. Anda dan tim penyelidik medis ditantang mendiagnosis misteri urine berbusa pada Pasien Jamal melalui analisis rekam medis laboratorium, kajian literatur nefron, dan diskusi kelompok terstruktur.
+                    </p>
+                    <div class="flex flex-wrap gap-4 pt-4">
+                        <button onclick="switchView('student')" class="px-8 py-4 bg-medical-500 hover:bg-medical-600 text-white font-bold rounded-2xl shadow-lg shadow-medical-500/30 transition flex items-center space-x-3 text-base">
+                            <i class="fa-solid fa-user-doctor"></i>
+                            <span>Mulai Investigasi (Siswa)</span>
+                        </button>
+                        <button onclick="promptTeacherLogin()" class="px-6 py-4 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-2xl border border-white/20 transition flex items-center space-x-2 text-sm">
+                            <i class="fa-solid fa-chalkboard-user"></i>
+                            <span>Dashboard Guru</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+                    <div class="w-12 h-12 bg-medical-50 text-medical-600 rounded-xl flex items-center justify-center text-xl font-bold">
+                        <i class="fa-solid fa-file-medical-alt"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-900 text-justify">1. Simulasi Saringan</h3>
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        Percobaan simulasi saringan untuk menganalogikan konsep abstrak pada proses penyaringan di Glomerulus pada Ginjal.
+                    </p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+                    <div class="w-12 h-12 bg-sky-50 text-sky-600 rounded-xl flex items-center justify-center text-xl font-bold">
+                        <i class="fa-solid fa-book-medical"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-900">2. Analisis Rekam Medis</h3>
+                    <p class="text-xs text-slate-500 leading-relaxed text-justify ">
+                        Evaluasi nilai laboratorium pasien seperti kadar albumin darah, ureum, kreatinin, hingga komposisi protein di dalam urine.
+                    </p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+                    <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-xl font-bold">
+                        <i class="fa-solid fa-clipboard-question"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-900 text-justify">3. Kartu Literatur Nefron</h3>
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        Gunakan pembagian peran tim untuk meneliti mekanisme filtrasi glomerulus, proteinuria, dan kaitannya dengan edema tubuh.
+                    </p>
+                </div>
+                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+                    <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-xl font-bold">
+                        <i class="fa-solid fa-clipboard-question"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-900 text-justify">4. Pertanyaan Sintesis Tim</h3>
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        Selesaikan pertanyaan analitis spesifik berdasarkan nomor kelompok Anda dan validasi hipotesis awal bersama tim.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= STUDENT DASHBOARD ================= -->
+        <div id="view-student" class="space-y-6 hidden">
+            
+            <!-- Student Action Bar (Download PDF for Students) -->
+            <div id="student-action-bar" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 hidden">
+                <div class="flex items-center space-x-2 text-sm font-medium text-slate-700">
+                    <i class="fa-solid fa-file-pdf text-rose-600 text-lg"></i>
+                    <span>Lembar kerja aktif siap diunduh menjadi dokumen PDF.</span>
+                </div>
+                <button type="button" onclick="downloadStudentPDF()" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-sm rounded-xl shadow-lg shadow-rose-500/25 transition flex items-center space-x-2">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Unduh LKPD ke PDF</span>
+                </button>
+            </div>
+
+            <!-- Step 1: Group Identity & Setup -->
+            <div id="card-identity" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+                <div class="flex items-center space-x-3 pb-4 border-b border-slate-100 mb-6">
+                    <div class="w-10 h-10 bg-medical-50 text-medical-600 rounded-xl flex items-center justify-center font-bold">1</div>
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900">Identitas Kelompok Penyelidik</h2>
+                        <p class="text-xs text-slate-500">Pilih nomor kelompok dan masukkan data anggota tim sebelum memulai investigasi.</p>
+                    </div>
+                </div>
+
+                <form id="group-form" onsubmit="saveIdentity(event)" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Nama Kelompok / Tim </label>
+                        <input type="text" id="group-name" required placeholder="Contoh: Tim Nephron Squad" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-medical-500 focus:outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Nomor Kelompok </label>
+                        <select id="group-number" onchange="handleGroupNumberChange(this.value)" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-medical-500 focus:outline-none transition">
+                            <option value="">-- Pilih Nomor Kelompok --</option>
+                            <option value="1">Kelompok 1 </option>
+                            <option value="2">Kelompok 2 </option>
+                            <option value="3">Kelompok 3 </option>
+                            <option value="4">Kelompok 4 </option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2 space-y-4 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                        <label class="block text-sm font-bold text-slate-800">Peran Anggota Kelompok </label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">1. Ilmuwan </label>
+                                <input type="text" id="role-ilmuwan" required placeholder="Nama siswa sebagai Ilmuwan" class="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-medical-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">2. Peneliti Literatur </label>
+                                <input type="text" id="role-peneliti" required placeholder="Nama siswa sebagai Peneliti Literatur" class="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-medical-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">3. Pencatat </label>
+                                <input type="text" id="role-pencatat" required placeholder="Nama siswa sebagai Pencatat" class="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-medical-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">4. Juru Bicara </label>
+                                <input type="text" id="role-jurubicara" required placeholder="Nama siswa sebagai Juru Bicara" class="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-medical-500 focus:outline-none">
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Nama Perwakilan Pengisi </label>
+                        <input type="text" id="group-representative" required placeholder="Nama siswa penanggung jawab input" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-medical-500 focus:outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Tanggal Kegiatan</label>
+                        <input type="date" id="group-date" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-medical-500 focus:outline-none transition">
+                    </div>
+                    <div class="md:col-span-2 flex justify-end pt-4 border-t border-slate-100">
+                        <button type="submit" class="px-6 py-3 bg-medical-600 hover:bg-medical-700 text-white font-semibold rounded-xl shadow-lg shadow-medical-500/20 transition flex items-center space-x-2">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            <span>Simpan Identitas & Mulai Investigasi</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- LKPD Workspace (Unlocked after identity is set) -->
+            <div id="lkpd-workspace" class="space-y-6 hidden">
+                
+                <!-- Clinical Case Banner -->
+                <div class="bg-gradient-to-br from-slate-900 to-sky-950 text-white rounded-2xl p-6 sm:p-8 shadow-md relative overflow-hidden">
+                    <div class="absolute -right-10 -bottom-10 opacity-10 text-9xl">
+                        <i class="fa-solid fa-user-injured"></i>
+                    </div>
+                    <div class="relative z-10">
+                        <div class="flex items-center space-x-2 text-sky-400 text-xs font-bold uppercase tracking-wider mb-2">
+                            <i class="fa-solid fa-file-medical"></i>
+                            <span>Kasus Utama UGD Rumah Sakit</span>
+                        </div>
+                        <h3 class="text-xl sm:text-2xl font-bold mb-3">Misteri Urine Berbusa Pasien X (Bapak Jamal, 32 Tahun)</h3>
+                        <p class="text-slate-300 text-sm leading-relaxed mb-4">
+                            Pasien datang dengan keluhan lemas, mual, kaki dan perut membengkak sejak seminggu terakhir. Urin berwarna kecoklatan seperti teh dan <strong>selalu berbusa tebal</strong> setiap buang air kecil. Selidiki arsip rekam medis dan literatur untuk memecahkan misteri fisiologis ini!
+                        </p>
+                        <div class="flex flex-wrap gap-4 text-xs font-medium text-slate-200 pt-3 border-t border-white/10">
+                            <div><span class="text-sky-400 font-bold">Tim Aktif:</span> <span id="display-active-group-name" class="underline">--</span></div>
+                            <div><span class="text-sky-400 font-bold">Perwakilan:</span> <span id="display-active-rep" class="underline">--</span></div>
+                            <div class="ml-auto text-emerald-400 flex items-center space-x-1">
+                                <i class="fa-solid fa-circle-check"></i>
+                                <span id="sync-status-indicator">Tersimpan di Perangkat</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Menu Pemilihan Pertanyaan Utama Berdasarkan Topik -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+                    <div class="flex items-center space-x-3 pb-4 border-b border-slate-100 mb-6">
+                        <div class="w-10 h-10 bg-medical-50 text-medical-600 rounded-xl flex items-center justify-center font-bold">
+                             <div class="w-10 h-10 bg-medical-50 text-medical-600 rounded-xl flex items-center justify-center font-bold">2</div>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-900">Pemilihan Fokus Pertanyaan Investigasi Tim</h2>
+                            <p class="text-xs text-slate-500">Pilih salah satu fokus pertanyaan utama yang akan diselidiki oleh tim Anda.</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" id="investigation-question-options">
+                        <label class="p-4 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 space-y-2 cursor-pointer transition flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="px-2.5 py-1 bg-medical-100 text-medical-800 text-xs font-bold rounded-lg inline-block">Fokus 1</span>
+                                    <input type="radio" name="selected-investigation-question" value="Topik 1 & 4: Urine berbusa tebal" class="text-medical-600 focus:ring-medical-500">
+                                </div>
+                                <p class="text-xs text-slate-700 leading-relaxed text-justify">
+                                    Berdasarkan keluhan Pak Jamal yang urinenya berbusa tebal dan tidak cepat hilang, sebenarnya apa yang ada di dalam urine tersebut, dan bagaimana zat itu bisa sampai ke sana hingga memicu busa yang begitu pekat?
+                                </p>
+                            </div>
+                        </label>
+                        <label class="p-4 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 space-y-2 cursor-pointer transition flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="px-2.5 py-1 bg-medical-100 text-medical-800 text-xs font-bold rounded-lg inline-block">Fokus 2</span>
+                                    <input type="radio" name="selected-investigation-question" value="Topik 2: Edema kaki dan perut" class="text-medical-600 focus:ring-medical-500">
+                                </div>
+                                <p class="text-xs text-slate-700 leading-relaxed text-justify">
+                                    Berdasarkan keluhan Pak Jamal yang kedua kaki dan perutnya membengkak, sebenarnya apa yang sedang terjadi di dalam tubuhnya hingga cairan menumpuk di bagian tersebut, dan apa kaitannya dengan hasil pemeriksaan darahnya?
+                                </p>
+                            </div>
+                        </label>
+                        <label class="p-4 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 space-y-2 cursor-pointer transition flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="px-2.5 py-1 bg-medical-100 text-medical-800 text-xs font-bold rounded-lg inline-block">Fokus 3</span>
+                                    <input type="radio" name="selected-investigation-question" value="Topik 3: Gangguan fungsi ginjal" class="text-medical-600 focus:ring-medical-500">
+                                </div>
+                                <p class="text-xs text-slate-700 leading-relaxed text-justify">
+                                    Berdasarkan keluhan dan hasil laboratorium Pak Jamal, sebenarnya bagian ginjal mana yang sedang tidak bekerja normal hingga memicu kondisi fisik yang dialaminya, dan bukti apa dari data yang menguatkan dugaan timmu?
+                                </p>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="button" onclick="saveSection('investigationQuestion')" class="px-5 py-2.5 bg-medical-600 hover:bg-medical-700 text-white font-medium text-sm rounded-xl transition flex items-center space-x-2">
+                            <i class="fa-solid fa-check"></i>
+                            <span>Simpan Pilihan Pertanyaan</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Hypothesis Section -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+                    <div class="flex items-center space-x-3 pb-4 border-b border-slate-100 mb-6">
+                        <div class="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center font-bold">
+                             <div class="w-10 h-10 bg-medical-50 text-medical-600 rounded-xl flex items-center justify-center font-bold">3</div>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-900">Dugaan Awal (Hipotesis Tim)</h2>
+                            <p class="text-xs text-slate-500">Diskusikan bersama tim sebelum mengumpulkan bukti lab dan literatur.</p>
+                        </div>
+                    </div>
+                    <textarea id="hypothesis-input" rows="3" placeholder="Tuliskan dugaan awal tim mengenai penyebab keluhan Pak Jamal..." class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-medical-500 focus:outline-none transition mb-4"></textarea>
+                    <div class="flex justify-end">
+                        <button type="button" onclick="saveSection('hypothesis')" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-medium text-sm rounded-xl transition flex items-center space-x-2">
+                            <i class="fa-solid fa-check"></i>
+                            <span>Simpan Hipotesis</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PART 2.5: Physical Filtration Test Evidence Table -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 mb-6 gap-2">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-teal-50 text-teal-600 rounded-xl flex items-center justify-center font-bold">
+                                 <div class="w-10 h-10 bg-medical-50 text-medical-600 rounded-xl flex items-center justify-center font-bold">4</div>
+                            </div>
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-900">Data Hasil Uji Fisik Saringan (Bukti Fisik)</h2>
+                                <p class="text-xs text-slate-500">Catat pengamatan uji fisik saringan, kejernihan cairan, dan kondisi partikel.</p>
+                            </div>
+                        </div>
+                        <button type="button" onclick="saveSection('physicalTest')" class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white font-medium text-sm rounded-xl shadow transition flex items-center space-x-2">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            <span>Simpan Uji Fisik</span>
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto mb-4">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 border-b border-slate-200 text-justify">
+                                    <th class="p-3 font-semibold rounded-l-xl">Kondisi Saringan</th>
+                                    <th class="p-3 font-semibold">Kejernihan (Bening/Keruh) Cairan</th>
+                                    <th class="p-3 font-semibold rounded-r-xl">Partikel Tepung Saringan (Tertahan/Lolos)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr class="hover:bg-slate-50 transition">
+                                    <td class="p-3 font-medium text-slate-700">Saringan UTUH</td>
+                                    <td class="p-3">
+                                        <input type="text" id="physical-utuh-kejernihan" placeholder="Contoh: Bening" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-medical-500 focus:outline-none transition">
+                                    </td>
+                                    <td class="p-3">
+                                        <input type="text" id="physical-utuh-partikel" placeholder="Contoh: Tertahan" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-medical-500 focus:outline-none transition">
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-slate-50 transition">
+                                    <td class="p-3 font-medium text-slate-700">Saringan SOBEK</td>
+                                    <td class="p-3">
+                                        <input type="text" id="physical-sobek-kejernihan" placeholder="Contoh: Keruh" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-medical-500 focus:outline-none transition">
+                                    </td>
+                                    <td class="p-3">
+                                        <input type="text" id="physical-sobek-partikel" placeholder="Contoh: Lolos" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-medical-500 focus:outline-none transition">
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Catatan tambahan (opsional) — hal lain yang kalian amati di stasiun ini dan mungkin berguna untuk pemecahan kasus:</label>
+                        <textarea id="physical-notes" rows="2" placeholder="Tuliskan catatan tambahan di sini..." class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-medical-500 focus:outline-none transition"></textarea>
+                    </div>
+                </div>
+
+                <!-- PART 3: Medical Lab Analysis Table -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 mb-6 gap-2">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center font-bold">5</div>
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-900">Data Hasil Analisis Rekam Medis</h2>
+                                <p class="text-xs text-slate-500">Masukkan nilai rujukan normal dan hasil laboratorium pasien Jamal.</p>
+                            </div>
+                        </div>
+                        <button type="button" onclick="saveSection('labAnalysis')" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm rounded-xl shadow transition flex items-center space-x-2">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            <span>Simpan Data Lab</span>
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 border-b border-slate-200">
+                                    <th class="p-3 font-semibold rounded-l-xl">Komponen Urine / Darah</th>
+                                    <th class="p-3 font-semibold">Nilai Rujukan Normal</th>
+                                    <th class="p-3 font-semibold rounded-r-xl">Hasil Lab Pasien Jamal</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lab-table-body" class="divide-y divide-slate-100">
+                                <!-- Populated dynamically by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- PART 4: Literature Selection Table -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 mb-6 gap-2">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-sky-50 text-sky-600 rounded-xl flex items-center justify-center font-bold">6</div>
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-900">Pemilihan Sumber Literatur & Kartu Referensi</h2>
+                                <p class="text-xs text-slate-500">Tentukan relevansi kartu, alasan, dan temukan informasi penting sesuai pembagian peran.</p>
+                            </div>
+                        </div>
+                        <button type="button" onclick="saveSection('literature')" class="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white font-medium text-sm rounded-xl shadow transition flex items-center space-x-2">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            <span>Simpan Literatur</span>
+                        </button>
+                    </div>
+
+                    <div class="bg-sky-50 border border-sky-100 rounded-xl p-4 mb-6 text-xs text-sky-900 flex items-start space-x-3">
+                        <i class="fa-solid fa-circle-info text-sky-600 mt-0.5 text-base"></i>
+                        <div>
+                            <span class="font-bold">Pembagian Tanggung Jawab:</span>
+                            <ul class="list-disc list-inside mt-1 space-y-0.5 text-sky-800">
+                                <li><strong>Peneliti Literatur:</strong> Mengisi Kartu 3 dan Kartu 6.</li>
+                                <li><strong>Pencatat:</strong> Mengisi Kartu 4.</li>
+                                <li><strong>Juru Bicara:</strong> Mengisi Kartu 5.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4" id="literature-cards-container">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- PART 4.5: Analogy Transformation Table -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 mb-6 gap-2">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-bold">
+                                 <div class="w-10 h-10 bg-medical-50 text-medical-600 rounded-xl flex items-center justify-center font-bold">7</div>
+                            </div>
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-900">Transformasi Analogi ke Konsep Biologi</h2>
+                                <p class="text-xs text-slate-500">Hubungkan elemen simulasi saringan dengan organ/komponen biologis nyata dari sumber literratur.</p>
+                            </div>
+                        </div>
+                        <button type="button" onclick="saveSection('analogy')" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-xl shadow transition flex items-center space-x-2">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            <span>Simpan Analogi</span>
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 border-b border-slate-200">
+                                    <th class="p-3 font-semibold rounded-l-xl">Elemen Simulasi</th>
+                                    <th class="p-3 font-semibold rounded-r-xl">Organ/Komponen Biologis Nyata</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 text-xs sm:text-sm">
+                                <tr class="hover:bg-slate-50 transition">
+                                    <td class="p-3 font-medium text-slate-700">Kertas saring</td>
+                                    <td class="p-3">
+                                        <input type="text" id="analogy-kertas" placeholder="Tuliskan komponen biologis nyata..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-medical-500 focus:outline-none transition">
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-slate-50 transition">
+                                    <td class="p-3 font-medium text-slate-700">Partikel tepung</td>
+                                    <td class="p-3">
+                                        <input type="text" id="analogy-tepung" placeholder="Tuliskan komponen biologis nyata..." class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-medical-500 focus:outline-none transition">
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-slate-50 transition">
+                                    <td class="p-3 font-medium text-slate-700">Air yang lolos</td>
+                                    <td class="p-3">
+                                        <input type="text" id="analogy-air" placeholder="Tuliskan komponen biologis nyata..." class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-medical-500 focus:outline-none transition">
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-slate-50 transition">
+                                    <td class="p-3 font-medium text-slate-700">Saringan yang dilubangi</td>
+                                    <td class="p-3">
+                                        <input type="text" id="analogy-saringan" placeholder="Tuliskan komponen biologis nyata..." class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-medical-500 focus:outline-none transition">
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- PART 5: Synthesis Questions Based on Group -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 mb-6 gap-2">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-bold">8</div>
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-900" id="synthesis-title">Pertanyaan Sintesis – Analisis Kasus Jamal</h2>
+                                <p class="text-xs text-slate-500" id="synthesis-subtitle">Pertanyaan disesuaikan dengan nomor kelompok Anda.</p>
+                            </div>
+                        </div>
+                        <button type="button" onclick="saveSection('synthesis')" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-xl shadow transition flex items-center space-x-2">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            <span>Simpan Sintesis</span>
+                        </button>
+                    </div>
+
+                    <div id="synthesis-questions-container" class="space-y-6">
+                        <!-- Populated dynamically based on group number -->
+                    </div>
+                </div>
+
+                <!-- PART 6: Evaluation & Reflection -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 mb-6 gap-2">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center font-bold">9</div>
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-900">Evaluasi, Validasi & Refleksi Tim</h2>
+                                <p class="text-xs text-slate-500">Validasi hipotesis awal dan refleksikan kontribusi anggota.</p>
+                            </div>
+                        </div>
+                        <button type="button" onclick="saveSection('evaluation')" class="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium text-sm rounded-xl shadow transition flex items-center space-x-2">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            <span>Simpan Refleksi</span>
+                        </button>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Evaluasi & Validasi Hipotesis</label>
+                            <p class="text-xs text-slate-500 mb-2">Bandingkan Hipotesis Awal timmu di awal penyelidikan dengan temuan akhir ini. Apakah dugaan awal terbukti benar atau perlu diperbaiki?</p>
+                            <textarea id="eval-validation" rows="3" placeholder="Tuliskan evaluasi hipotesis tim..." class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-medical-500 focus:outline-none transition"></textarea>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">Semua anggota menjalankan perannya masing-masing?</label>
+                                <div class="flex space-x-4 mb-3">
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="radio" name="role-active" value="Ya" class="text-medical-600 focus:ring-medical-500" checked>
+                                        <span class="text-sm font-medium text-slate-700">Ya</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="radio" name="role-active" value="Tidak" class="text-medical-600 focus:ring-medical-500">
+                                        <span class="text-sm font-medium text-slate-700">Tidak</span>
+                                    </label>
+                                </div>
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Jika ada anggota yang tidak menjalankan perannya, tuliskan namanya:</label>
+                                <input type="text" id="inactive-members" placeholder="Nama anggota (jika ada)" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-medical-500 focus:outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">Kendala / Pertanyaan untuk Guru</label>
+                                <p class="text-xs text-slate-500 mb-2">Jika ada bagian yang sulit atau kurang jelas, tuliskan di sini agar guru dapat membantu:</p>
+                                <textarea id="student-difficulties" rows="3" placeholder="Tuliskan kendala atau pertanyaan..." class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-medical-500 focus:outline-none transition"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ================= TEACHER DASHBOARD ================= -->
+        <div id="view-teacher" class="space-y-6 hidden">
+            
+            <!-- Teacher Header & Summary Cards -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900"><i class="fa-solid fa-chalkboard-user text-medical-600 mr-2"></i> Dashboard Guru & Monitoring LKPD</h2>
+                    <p class="text-xs text-slate-500 mt-1">Pantau progres dan jawaban seluruh kelompok.</p>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="logoutTeacher()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-sm rounded-xl transition flex items-center space-x-2">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Keluar Mode Guru</span>
+                    </button>
+                    <button onclick="loadTeacherData()" class="px-4 py-2 bg-medical-600 hover:bg-medical-700 text-white font-medium text-sm rounded-xl shadow transition flex items-center space-x-2">
+                        <i class="fa-solid fa-rotate"></i>
+                        <span>Muat Ulang Data</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Summary Metrics Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Total Kelompok</div>
+                    <div class="text-2xl font-extrabold text-slate-900">4 Kelompok</div>
+                    <div class="text-xs text-slate-500 mt-1"><i class="fa-solid fa-users text-medical-600 mr-1"></i> Terdaftar di sistem</div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Sudah Mengisi</div>
+                    <div class="text-2xl font-extrabold text-emerald-600" id="metric-submitted">0</div>
+                    <div class="text-xs text-slate-500 mt-1"><i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i> Telah menyimpan identitas</div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Belum Mengisi</div>
+                    <div class="text-2xl font-extrabold text-amber-600" id="metric-pending">4</div>
+                    <div class="text-xs text-slate-500 mt-1"><i class="fa-solid fa-clock text-amber-500 mr-1"></i> Menunggu respons</div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Rata-rata Progres</div>
+                    <div class="text-2xl font-extrabold text-medical-600" id="metric-progress">0%</div>
+                    <div class="w-full bg-slate-100 h-2 rounded-full mt-2 overflow-hidden">
+                        <div id="metric-progress-bar" class="bg-medical-600 h-full w-0 transition-all duration-500"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter & Search Toolbar -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="w-full md:w-72 relative">
+                    <i class="fa-solid fa-search absolute left-3.5 top-3.5 text-slate-400"></i>
+                    <input type="text" id="teacher-search" oninput="filterGroups()" placeholder="Cari nama kelompok..." class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-medical-500 focus:outline-none">
+                </div>
+                <div class="flex items-center space-x-3 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+                    <button onclick="filterGroupStatus('all')" class="px-4 py-2 bg-medical-50 text-medical-700 font-semibold text-xs rounded-xl border border-medical-200 transition">Semua</button>
+                    <button onclick="filterGroupStatus('active')" class="px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 font-semibold text-xs rounded-xl border border-slate-200 transition">Aktif Mengisi</button>
+                    <button onclick="filterGroupStatus('empty')" class="px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 font-semibold text-xs rounded-xl border border-slate-200 transition">Belum Aktif</button>
+                </div>
+            </div>
+
+            <!-- 4 Group Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="teacher-group-cards">
+                <!-- Dynamically rendered group cards -->
+            </div>
+
+            <!-- Detail Modal for Teacher Viewing Group Answers -->
+            <div id="teacher-detail-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+                <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+                    <div class="p-6 bg-slate-900 text-white flex items-center justify-between">
+                        <div>
+                            <span class="text-xs text-sky-400 font-bold uppercase tracking-wider" id="modal-group-num">Kelompok --</span>
+                            <h3 class="text-xl font-bold" id="modal-group-name">Detail Pekerjaan Kelompok</h3>
+                        </div>
+                        <button onclick="closeTeacherDetailModal()" class="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center text-white transition">
+                            <i class="fa-solid fa-xmark text-lg"></i>
+                        </button>
+                    </div>
+                    <div id="modal-group-content" class="p-6 overflow-y-auto space-y-6 flex-1 bg-slate-50 text-slate-800 text-sm">
+                        <!-- Populated with full group submission details -->
+                    </div>
+                    <div class="p-4 bg-white border-t border-slate-200 flex justify-end space-x-3">
+                        <button onclick="downloadTeacherPDF()" class="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-medium text-sm rounded-xl shadow-lg shadow-rose-500/20 transition flex items-center space-x-2">
+                            <i class="fa-solid fa-file-pdf"></i>
+                            <span>Unduh Laporan PDF</span>
+                        </button>
+                        <button onclick="closeTeacherDetailModal()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-sm rounded-xl transition">Tutup</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 mt-auto text-center text-xs text-slate-500">
+        Digital Medical Investigation — LKM Biologi Sistem Ekskresi Ginjal &copy; 2026
+    </footer>
+
+    <!-- Firebase SDK Imports and Robust Storage Engine -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'digital-medical-investigation-ginjal';
+       const firebaseConfig = {
+      apiKey: "AIzaSyCOlipYH7UCf8VC0A-huOwJxRCWpydClbY",
+      authDomain: "silvi-d0a12.firebaseapp.com",
+      projectId: "silvi-d0a12",
+      storageBucket: "silvi-d0a12.firebasestorage.app",
+      messagingSenderId: "146679710935",
+      appId: "1:146679710935:web:c591d3e434a2a272325c92"
+    };
+
+        let app, db, auth;
+        let currentUser = null;
+        let useCloud = true;
+
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+
+            const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+            if (initialToken) {
+                signInWithCustomToken(auth, initialToken).catch(() => signInAnonymously(auth));
+            } else {
+                signInAnonymously(auth).catch(err => {
+                    console.warn("Anon auth fallback:", err);
+                    useCloud = false;
+                });
+            }
+
+            onAuthStateChanged(auth, (user) => {
+                currentUser = user;
+            });
+        } catch (e) {
+            console.warn("Firebase initialization warning, using local storage engine:", e);
+            useCloud = false;
+        }
+
+        const labComponents = [
+            { id: 'albumin', name: 'Albumin Darah', normal: '3.5 - 5.0 g/dL' },
+            { id: 'ureum', name: 'Ureum (BUN)', normal: '7 - 20 mg/dL' },
+            { id: 'kreatinin', name: 'Kreatinin', normal: '0.6 - 1.2 mg/dL' },
+            { id: 'kolesterol', name: 'Kolesterol Total', normal: '< 200 mg/dL' },
+            { id: 'trigliserida', name: 'Trigliserida', normal: '< 150 mg/dL' },
+            { id: 'warnaUrine', name: 'Warna dan Kejernihan Urine', normal: 'Kuning jernih' },
+            { id: 'proteinUrine', name: 'Protein dalam Urine', normal: 'Negatif / Normal' },
+            { id: 'darahUrine', name: 'Darah (Eritrosit) dalam Urine', normal: 'Negatif (< 2 sel/LPB)' },
+            { id: 'glukosaUrine', name: 'Glukosa dalam Urine', normal: 'Negatif' },
+            { id: 'ketonUrine', name: 'Keton dalam Urine', normal: 'Negatif' }
+        ];
+
+        const literatureCards = [
+            { id: 'card3', title: 'Kartu 3. Fisika Filtrasi Glomerulus', role: 'Peneliti Literatur' },
+            { id: 'card4', title: 'Kartu 4. Proteinuria dan Busa', role: 'Pencatat' },
+            { id: 'card5', title: 'Kartu 5. Albumin dan Edema', role: 'Juru Bicara' },
+            { id: 'card6', title: 'Kartu 6. Pola Hidup Sehat Ginjal', role: 'Peneliti Literatur' }
+        ];
+
+        let currentActiveGroupNumber = localStorage.getItem('dmi_group_number') || null;
+        let currentGroupData = {
+            identity: { groupName: '', groupNumber: '', members: '', representative: '', date: new Date().toISOString().split('T')[0] },
+            investigationQuestion: '',
+            hypothesis: '',
+            physicalTest: { utuhKejernihan: '', utuhPartikel: '', sobekKejernihan: '', sobekPartikel: '', notes: '' },
+            analogy: { kertas: '', tepung: '', air: '', saringan: '' },
+            labAnalysis: {},
+            literature: {},
+            synthesis: {},
+            evaluation: { evalValidation: '', roleActive: 'Ya', inactiveMembers: '', studentDifficulties: '' },
+            updatedAt: null
+        };
+
+        let allGroupsData = { 1: null, 2: null, 3: null, 4: null };
+
+        window.switchView = switchView;
+        window.promptTeacherLogin = promptTeacherLogin;
+        window.closeTeacherModal = closeTeacherModal;
+        window.handleTeacherLogin = handleTeacherLogin;
+        window.logoutTeacher = logoutTeacher;
+        window.saveIdentity = saveIdentity;
+        window.saveSection = saveSection;
+        window.loadTeacherData = loadTeacherData;
+        window.filterGroupStatus = filterGroupStatus;
+        window.filterGroups = filterGroups;
+        window.viewGroupDetail = viewGroupDetail;
+        window.closeTeacherDetailModal = closeTeacherDetailModal;
+        window.printGroupReport = printGroupReport;
+        window.handleGroupNumberChange = handleGroupNumberChange;
+        window.downloadStudentPDF = downloadStudentPDF;
+        window.downloadTeacherPDF = downloadTeacherPDF;
+        window.deleteGroupSubmission = deleteGroupSubmission;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('group-date').value = new Date().toISOString().split('T')[0];
+            buildLabTable();
+            buildLiteratureCards();
+
+            // Default to Home view upon initial load
+            switchView('home');
+
+            if (currentActiveGroupNumber) {
+                document.getElementById('group-number').value = currentActiveGroupNumber;
+                updateSynthesisQuestions(currentActiveGroupNumber);
+                fetchGroupData(currentActiveGroupNumber);
+            }
+        });
+
+        function showNotification(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-emerald-600 text-white' : (type === 'error' ? 'bg-rose-600 text-white' : 'bg-slate-800 text-white');
+            toast.className = `${bgClass} px-4 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center space-x-2 pointer-events-auto fade-in`;
+            toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}"></i><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        function switchView(view) {
+            const homeView = document.getElementById('view-home');
+            const studentView = document.getElementById('view-student');
+            const teacherView = document.getElementById('view-teacher');
+            const btnHome = document.getElementById('nav-btn-home');
+            const btnStudent = document.getElementById('nav-btn-student');
+            const btnTeacher = document.getElementById('nav-btn-teacher');
+
+            const defaultNavClass = "px-4 py-2 text-sm font-semibold rounded-xl bg-slate-800/60 text-sky-100 hover:bg-slate-800 transition flex items-center space-x-2 border border-white/10";
+            const activeNavClass = "px-4 py-2 text-sm font-semibold rounded-xl bg-white/20 text-white shadow-sm transition flex items-center space-x-2";
+
+            btnHome.className = defaultNavClass;
+            btnStudent.className = defaultNavClass;
+            btnTeacher.className = defaultNavClass;
+
+            homeView.classList.add('hidden');
+            studentView.classList.add('hidden');
+            teacherView.classList.add('hidden');
+
+            if (view === 'home') {
+                homeView.classList.remove('hidden');
+                btnHome.className = activeNavClass;
+            } else if (view === 'student') {
+                studentView.classList.remove('hidden');
+                btnStudent.className = activeNavClass;
+            } else {
+                teacherView.classList.remove('hidden');
+                btnTeacher.className = activeNavClass;
+                loadTeacherData();
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function promptTeacherLogin() {
+            document.getElementById('teacher-pin-modal').classList.remove('hidden');
+            document.getElementById('teacher-pin-input').value = '';
+            document.getElementById('teacher-pin-input').focus();
+        }
+
+        function closeTeacherModal() {
+            document.getElementById('teacher-pin-modal').classList.add('hidden');
+        }
+
+        function handleTeacherLogin(e) {
+            e.preventDefault();
+            const pin = document.getElementById('teacher-pin-input').value;
+            if (pin === '1234' || pin === 'guru2026') {
+                closeTeacherModal();
+                showNotification('Login guru berhasil!', 'success');
+                switchView('teacher');
+            } else {
+                showNotification('PIN salah! Gunakan PIN: 1234', 'error');
+            }
+        }
+
+        function logoutTeacher() {
+            switchView('student');
+            showNotification('Keluar dari mode guru.', 'info');
+        }
+
+        function buildLabTable() {
+            const tbody = document.getElementById('lab-table-body');
+            tbody.innerHTML = '';
+            labComponents.forEach(comp => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition";
+                tr.innerHTML = `
+                    <td class="p-3 font-medium text-slate-700">${comp.name}</td>
+                    <td class="p-3 text-slate-500 font-mono text-xs">${comp.normal}</td>
+                    <td class="p-3">
+                        <input type="text" id="lab-${comp.id}" placeholder="Masukkan hasil lab..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-medical-500 focus:outline-none transition">
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function buildLiteratureCards() {
+            const container = document.getElementById('literature-cards-container');
+            container.innerHTML = '';
+            literatureCards.forEach((card, index) => {
+                const div = document.createElement('div');
+                div.className = "p-5 bg-slate-50 rounded-xl border border-slate-200 space-y-4";
+                
+                // Only place the single QR code image at the beginning (next to Kartu 3 / index 0)
+                const qrCodeHTML = index === 0 ? `
+                    <div class="flex flex-col sm:flex-row items-center gap-4 bg-sky-50/70 p-4 rounded-xl border border-sky-100 mb-4">
+                        <img src="https://lh3.googleusercontent.com/d/1ba-xLmOhG840fLFEbVpCFpQK1kEKO_gx=s400" alt="QR Code Literatur" class="w-40 h-40 object-contain rounded border border-slate-200 bg-white p-1 shadow-sm flex-shrink-0" onerror="this.onerror=null;this.src='https://placehold.co/100x100/f0f7ff/0284c7?text=QR+Literatur';">
+                        <div class="text-xs text-sky-900 leading-relaxed">
+                            <span class="font-bold block mb-1">Scan QR Code Sumber Literatur</span>
+                            Gunakan pemindai QR untuk mengakses referensi digital utama terkait mekanika filtrasi glomerulus dan patologi ginjal.
+                        </div>
+                    </div>
+                ` : '';
+
+                div.innerHTML = `
+                    ${qrCodeHTML}
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
+                        <div>
+                            <h4 class="font-bold text-slate-900">${card.title}</h4>
+                            <span class="text-xs text-medical-600 font-medium"><i class="fa-solid fa-user-tag mr-1"></i> Penanggung Jawab: ${card.role}</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <label class="text-xs font-semibold text-slate-700">Relevansi:</label>
+                            <select id="lit-rel-${card.id}" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-medical-500 focus:outline-none">
+                                <option value="">-- Pilih --</option>
+                                <option value="Relevan">Relevan</option>
+                                <option value="Tidak Relevan">Tidak Relevan</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Alasan</label>
+                            <textarea id="lit-reason-${card.id}" rows="2" placeholder="Tuliskan alasan..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-medical-500 focus:outline-none"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Informasi Penting yang Ditemukan</label>
+                            <textarea id="lit-info-${card.id}" rows="2" placeholder="Tuliskan informasi penting..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-medical-500 focus:outline-none"></textarea>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function handleGroupNumberChange(groupNum) {
+            updateSynthesisQuestions(groupNum);
+        }
+
+        function updateSynthesisQuestions(groupNum) {
+            const container = document.getElementById('synthesis-questions-container');
+            const title = document.getElementById('synthesis-title');
+            const subtitle = document.getElementById('synthesis-subtitle');
+            container.innerHTML = '';
+
+            let questions = [];
+            if (groupNum === '1' || groupNum === '8') {
+                title.textContent = "PERTANYAAN SINTESIS – FOKUS 1";
+                subtitle.textContent = "Fokus: Analisis Urine Berbusa & Proteinuria Glomerulus";
+                questions = [
+                    { id: 'q1', text: '1. Hasil lab mana yang menunjukkan urine Pak Jamal berbeda dari urine normal, dan zat apa yang berlebih di sana?' },
+                    { id: 'q2', text: '2. Mengapa zat itu bisa membuat urine berbusa tebal dan bertahan lama?' },
+                    { id: 'q3', text: '3. Seharusnya zat itu berada di mana, dan bagian ginjal mana yang bertugas menahannya?' }
+                ];
+            } else if (groupNum === '2') {
+                title.textContent = "PERTANYAAN SINTESIS – FOKUS 2";
+                subtitle.textContent = "Fokus: Analisis Edema Pembengkakan & Kadar Albumin Darah";
+                questions = [
+                    { id: 'q1', text: '1. Hasil lab darah mana yang tidak normal dan berkaitan dengan cairan tubuh?' },
+                    { id: 'q2', text: '2. Apa tugas zat itu di dalam pembuluh darah, dan apa yang terjadi pada cairan tubuh ketika kadarnya turun?' },
+                    { id: 'q3', text: '3. Lewat bagian ginjal mana zat itu bisa hilang dari darah Pak Jamal, dan apa buktinya di hasil lab urine?' }
+                ];
+            } else if (groupNum === '3') {
+                title.textContent = "PERTANYAAN SINTESIS – FOKUS 3";
+                subtitle.textContent = "Fokus: Struktur Saringan Glomerulus & Kebocoran Nefron";
+                questions = [
+                    { id: 'q1', text: '1. Zat apa yang seharusnya tertahan di darah tetapi ditemukan di urine Pak Jamal?' },
+                    { id: 'q2', text: '2. Bagaimana saringan glomerulus bekerja pada kondisi normal, dan zat apa yang lolos atau tertahan?' }
+                ];
+            } else {
+                title.textContent = "PERTANYAAN SINTESIS – ANALISIS KASUS JAMAL";
+                subtitle.textContent = "Pilih nomor kelompok terlebih dahulu pada bagian identitas.";
+                container.innerHTML = `<p class="text-sm text-slate-500 italic p-4 bg-slate-50 rounded-xl">Silakan pilih nomor kelompok (1-4) di bagian atas untuk memunculkan pertanyaan sintesis yang sesuai.</p>`;
+                return;
+            }
+
+            questions.forEach(q => {
+                const div = document.createElement('div');
+                div.className = "space-y-2 p-4 bg-slate-50 rounded-xl border border-slate-200";
+                div.innerHTML = `
+                    <label class="block text-sm font-bold text-slate-800">${q.text}</label>
+                    <textarea id="synth-${q.id}" rows="3" placeholder="Tuliskan jawaban analisis kelompok di sini..." class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-medical-500 focus:outline-none"></textarea>
+                `;
+                container.appendChild(div);
+            });
+
+            if (currentGroupData.synthesis) {
+                for (const [key, val] of Object.entries(currentGroupData.synthesis)) {
+                    const el = document.getElementById(`synth-${key}`);
+                    if (el) el.value = val;
+                }
+            }
+        }
+
+        async function saveIdentity(e) {
+            e.preventDefault();
+            const groupName = document.getElementById('group-name').value;
+            const groupNum = document.getElementById('group-number').value;
+            const ilmuwan = document.getElementById('role-ilmuwan').value;
+            const peneliti = document.getElementById('role-peneliti').value;
+            const pencatat = document.getElementById('role-pencatat').value;
+            const jurubicara = document.getElementById('role-jurubicara').value;
+            const members = `1. Ilmuwan: ${ilmuwan}, 2. Peneliti Literatur: ${peneliti}, 3. Pencatat: ${pencatat}, 4. Juru Bicara: ${jurubicara}`;
+            const representative = document.getElementById('group-representative').value;
+            const date = document.getElementById('group-date').value;
+
+            currentActiveGroupNumber = groupNum;
+            localStorage.setItem('dmi_group_number', groupNum);
+
+            currentGroupData.identity = { groupName, groupNumber: groupNum, roles: { ilmuwan, peneliti, pencatat, jurubicara }, members, representative, date };
+            currentGroupData.updatedAt = new Date().toISOString();
+
+            document.getElementById('lkpd-workspace').classList.remove('hidden');
+            document.getElementById('student-action-bar').classList.remove('hidden');
+            document.getElementById('display-active-group-name').textContent = `${groupName} (Kelompok ${groupNum})`;
+            document.getElementById('display-active-rep').textContent = representative;
+
+            updateSynthesisQuestions(groupNum);
+            await persistDataToCloud();
+            showNotification('Identitas kelompok berhasil disimpan! Lembar kerja terbuka.', 'success');
+            
+            document.getElementById('lkpd-workspace').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function saveSection(sectionName) {
+            if (!currentActiveGroupNumber) {
+                showNotification('Harap isi dan simpan identitas kelompok terlebih dahulu!', 'error');
+                return;
+            }
+
+            if (sectionName === 'investigationQuestion') {
+                const selectedQ = document.querySelector('input[name="selected-investigation-question"]:checked');
+                currentGroupData.investigationQuestion = selectedQ ? selectedQ.value : '';
+            } else if (sectionName === 'hypothesis') {
+                currentGroupData.hypothesis = document.getElementById('hypothesis-input').value;
+            } else if (sectionName === 'physicalTest') {
+                currentGroupData.physicalTest = {
+                    utuhKejernihan: document.getElementById('physical-utuh-kejernihan').value,
+                    utuhPartikel: document.getElementById('physical-utuh-partikel').value,
+                    sobekKejernihan: document.getElementById('physical-sobek-kejernihan').value,
+                    sobekPartikel: document.getElementById('physical-sobek-partikel').value,
+                    notes: document.getElementById('physical-notes').value
+                };
+            } else if (sectionName === 'analogy') {
+                currentGroupData.analogy = {
+                    kertas: document.getElementById('analogy-kertas').value,
+                    tepung: document.getElementById('analogy-tepung').value,
+                    air: document.getElementById('analogy-air').value,
+                    saringan: document.getElementById('analogy-saringan').value
+                };
+            } else if (sectionName === 'labAnalysis') {
+                const labData = {};
+                labComponents.forEach(comp => {
+                    labData[comp.id] = document.getElementById(`lab-${comp.id}`).value;
+                });
+                currentGroupData.labAnalysis = labData;
+            } else if (sectionName === 'literature') {
+                const litData = {};
+                literatureCards.forEach(card => {
+                    litData[card.id] = {
+                        relevance: document.getElementById(`lit-rel-${card.id}`).value,
+                        reason: document.getElementById(`lit-reason-${card.id}`).value,
+                        info: document.getElementById(`lit-info-${card.id}`).value
+                    };
+                });
+                currentGroupData.literature = litData;
+            } else if (sectionName === 'synthesis') {
+                const synthData = {};
+                const qInputs = document.querySelectorAll('[id^="synth-q"]');
+                qInputs.forEach(input => {
+                    synthData[input.id.replace('synth-', '')] = input.value;
+                });
+                currentGroupData.synthesis = synthData;
+            } else if (sectionName === 'evaluation') {
+                currentGroupData.evaluation = {
+                    evalValidation: document.getElementById('eval-validation').value,
+                    roleActive: document.querySelector('input[name="role-active"]:checked')?.value || 'Ya',
+                    inactiveMembers: document.getElementById('inactive-members').value,
+                    studentDifficulties: document.getElementById('student-difficulties').value
+                };
+            }
+
+            currentGroupData.updatedAt = new Date().toISOString();
+            
+            await persistDataToCloud();
+            showNotification(`Bagian ${sectionName} berhasil disimpan & disinkronkan ke Firebase!`, 'success');
+        }
+
+        async function persistDataToCloud() {
+            localStorage.setItem(`dmi_group_${currentActiveGroupNumber}`, JSON.stringify(currentGroupData));
+            
+            let master = JSON.parse(localStorage.getItem('dmi_master_groups') || '{}');
+            master[currentActiveGroupNumber] = currentGroupData;
+            localStorage.setItem('dmi_master_groups', JSON.stringify(master));
+
+            if (!db || !currentUser) {
+                document.getElementById('sync-status-indicator').textContent = 'Tersimpan (Local Mode)';
+                return;
+            }
+
+            try {
+                const groupDocRef = doc(db, 'artifacts', appId, 'groups', `group_${currentActiveGroupNumber}`);
+                await setDoc(groupDocRef, currentGroupData, { merge: true });
+                document.getElementById('sync-status-indicator').textContent = 'Tersimpan & Sinkron ke Firebase';
+            } catch (err) {
+                console.warn("Cloud persistence notice:", err);
+                document.getElementById('sync-status-indicator').textContent = 'Tersimpan di Perangkat';
+            }
+        }
+
+        async function fetchGroupData(groupNum) {
+            let local = localStorage.getItem(`dmi_group_${groupNum}`);
+            if (local) {
+                currentGroupData = JSON.parse(local);
+                populateUIFromData();
+            }
+
+            if (!useCloud || !db) return;
+
+            try {
+                const groupDocRef = doc(db, 'artifacts', appId, 'groups', `group_${groupNum}`);
+                const docSnap = await getDoc(groupDocRef);
+                if (docSnap.exists()) {
+                    currentGroupData = docSnap.data();
+                    populateUIFromData();
+                }
+            } catch (err) {
+                console.warn("Fetch from cloud skipped, loaded local data:", err);
+            }
+        }
+
+        function populateUIFromData() {
+            if (!currentGroupData.identity || !currentGroupData.identity.groupName) return;
+
+            document.getElementById('group-name').value = currentGroupData.identity.groupName || '';
+            document.getElementById('group-number').value = currentGroupData.identity.groupNumber || '';
+            if (currentGroupData.identity.roles) {
+                document.getElementById('role-ilmuwan').value = currentGroupData.identity.roles.ilmuwan || '';
+                document.getElementById('role-peneliti').value = currentGroupData.identity.roles.peneliti || '';
+                document.getElementById('role-pencatat').value = currentGroupData.identity.roles.pencatat || '';
+                document.getElementById('role-jurubicara').value = currentGroupData.identity.roles.jurubicara || '';
+            } else if (currentGroupData.identity.members) {
+                document.getElementById('role-ilmuwan').value = currentGroupData.identity.members;
+            }
+            document.getElementById('group-representative').value = currentGroupData.identity.representative || '';
+            document.getElementById('group-date').value = currentGroupData.identity.date || new Date().toISOString().split('T')[0];
+
+            document.getElementById('lkpd-workspace').classList.remove('hidden');
+            document.getElementById('student-action-bar').classList.remove('hidden');
+            document.getElementById('display-active-group-name').textContent = `${currentGroupData.identity.groupName} (Kelompok ${currentGroupData.identity.groupNumber})`;
+            document.getElementById('display-active-rep').textContent = currentGroupData.identity.representative;
+
+            updateSynthesisQuestions(currentGroupData.identity.groupNumber);
+
+            if (currentGroupData.investigationQuestion) {
+                const radioEl = document.querySelector(`input[name="selected-investigation-question"][value="${currentGroupData.investigationQuestion}"]`);
+                if (radioEl) radioEl.checked = true;
+            }
+
+            if (currentGroupData.hypothesis) {
+                document.getElementById('hypothesis-input').value = currentGroupData.hypothesis;
+            }
+
+            if (currentGroupData.physicalTest) {
+                document.getElementById('physical-utuh-kejernihan').value = currentGroupData.physicalTest.utuhKejernihan || '';
+                document.getElementById('physical-utuh-partikel').value = currentGroupData.physicalTest.utuhPartikel || '';
+                document.getElementById('physical-sobek-kejernihan').value = currentGroupData.physicalTest.sobekKejernihan || '';
+                document.getElementById('physical-sobek-partikel').value = currentGroupData.physicalTest.sobekPartikel || '';
+                document.getElementById('physical-notes').value = currentGroupData.physicalTest.notes || '';
+            }
+
+            if (currentGroupData.analogy) {
+                document.getElementById('analogy-kertas').value = currentGroupData.analogy.kertas || '';
+                document.getElementById('analogy-tepung').value = currentGroupData.analogy.tepung || '';
+                document.getElementById('analogy-air').value = currentGroupData.analogy.air || '';
+                document.getElementById('analogy-saringan').value = currentGroupData.analogy.saringan || '';
+            }
+
+            if (currentGroupData.labAnalysis) {
+                for (const [key, val] of Object.entries(currentGroupData.labAnalysis)) {
+                    const el = document.getElementById(`lab-${key}`);
+                    if (el) el.value = val;
+                }
+            }
+
+            if (currentGroupData.literature) {
+                for (const [key, lit] of Object.entries(currentGroupData.literature)) {
+                    const relEl = document.getElementById(`lit-rel-${key}`);
+                    const reasonEl = document.getElementById(`lit-reason-${key}`);
+                    const infoEl = document.getElementById(`lit-info-${key}`);
+                    if (relEl) relEl.value = lit.relevance || '';
+                    if (reasonEl) reasonEl.value = lit.reason || '';
+                    if (infoEl) infoEl.value = lit.info || '';
+                }
+            }
+
+            if (currentGroupData.synthesis) {
+                for (const [key, val] of Object.entries(currentGroupData.synthesis)) {
+                    const el = document.getElementById(`synth-${key}`);
+                    if (el) el.value = val;
+                }
+            }
+
+            if (currentGroupData.evaluation) {
+                document.getElementById('eval-validation').value = currentGroupData.evaluation.evalValidation || '';
+                const roleRadio = document.querySelector(`input[name="role-active"][value="${currentGroupData.evaluation.roleActive}"]`);
+                if (roleRadio) roleRadio.checked = true;
+                document.getElementById('inactive-members').value = currentGroupData.evaluation.inactiveMembers || '';
+                document.getElementById('student-difficulties').value = currentGroupData.evaluation.studentDifficulties || '';
+            }
+        }
+
+        async function loadTeacherData() {
+            let master = JSON.parse(localStorage.getItem('dmi_master_groups') || '{}');
+            for (let i = 1; i <= 4; i++) {
+                if (master[i]) {
+                    allGroupsData[i] = master[i];
+                } else {
+                    const local = localStorage.getItem(`dmi_group_${i}`);
+                    if (local) {
+                        allGroupsData[i] = JSON.parse(local);
+                    } else {
+                        allGroupsData[i] = null;
+                    }
+                }
+            }
+
+            if (useCloud && db) {
+                try {
+                    const colRef = collection(db, 'artifacts', appId, 'groups');
+                    const querySnapshot = await getDocs(colRef);
+                    querySnapshot.forEach((docSnap) => {
+                        const id = docSnap.id;
+                        if (id.startsWith('group_')) {
+                            const num = id.replace('group_', '');
+                            allGroupsData[num] = docSnap.data();
+                        }
+                    });
+                } catch (err) {
+                    console.warn("Cloud teacher fetch restricted, using local records:", err);
+                }
+            }
+
+            updateTeacherMetricsAndCards();
+            showNotification('Data guru berhasil dimuat!', 'success');
+        }
+
+        let currentFilterStatus = 'all';
+        let currentSearchQuery = '';
+
+        function filterGroupStatus(status) {
+            currentFilterStatus = status;
+            renderTeacherCards();
+        }
+
+        function filterGroups() {
+            currentSearchQuery = document.getElementById('teacher-search').value.toLowerCase();
+            renderTeacherCards();
+        }
+
+        function updateTeacherMetricsAndCards() {
+            let submittedCount = 0;
+            let totalProgressSum = 0;
+
+            for (let i = 1; i <= 4; i++) {
+                const data = allGroupsData[i];
+                if (data && data.identity && data.identity.groupName) {
+                    submittedCount++;
+                    let filled = 0;
+                    if (data.hypothesis) filled++;
+                    if (data.physicalTest && data.physicalTest.utuhKejernihan) filled++;
+                    if (data.analogy && data.analogy.kertas) filled++;
+                    if (data.labAnalysis && Object.keys(data.labAnalysis).length > 0) filled++;
+                    if (data.literature && Object.keys(data.literature).length > 0) filled++;
+                    if (data.synthesis && Object.keys(data.synthesis).length > 0) filled++;
+                    if (data.evaluation && data.evaluation.evalValidation) filled++;
+                    totalProgressSum += Math.round((filled / 7) * 100);
+                }
+            }
+
+            const pendingCount = 4 - submittedCount;
+            const avgProgress = submittedCount > 0 ? Math.round(totalProgressSum / 4) : 0;
+
+            document.getElementById('metric-submitted').textContent = submittedCount;
+            document.getElementById('metric-pending').textContent = pendingCount;
+            document.getElementById('metric-progress').textContent = `${avgProgress}%`;
+            document.getElementById('metric-progress-bar').style.width = `${avgProgress}%`;
+
+            renderTeacherCards();
+        }
+
+        function renderTeacherCards() {
+            const container = document.getElementById('teacher-group-cards');
+            container.innerHTML = '';
+
+            for (let i = 1; i <= 4; i++) {
+                const data = allGroupsData[i];
+                const hasSubmitted = data && data.identity && data.identity.groupName;
+                const groupName = hasSubmitted ? data.identity.groupName : `Kelompok ${i} (Belum Mengisi)`;
+                const members = hasSubmitted ? data.identity.members : 'Belum ada anggota terdaftar';
+                const rep = hasSubmitted ? data.identity.representative : '-';
+                const updatedAt = hasSubmitted && data.updatedAt ? new Date(data.updatedAt).toLocaleTimeString() : 'Belum ada aktivitas';
+
+                let filled = 0;
+                if (hasSubmitted) {
+                    if (data.hypothesis) filled++;
+                    if (data.physicalTest && data.physicalTest.utuhKejernihan) filled++;
+                    if (data.analogy && data.analogy.kertas) filled++;
+                    if (data.labAnalysis && Object.keys(data.labAnalysis).length > 0) filled++;
+                    if (data.literature && Object.keys(data.literature).length > 0) filled++;
+                    if (data.synthesis && Object.keys(data.synthesis).length > 0) filled++;
+                    if (data.evaluation && data.evaluation.evalValidation) filled++;
+                }
+                const progressPct = Math.round((filled / 7) * 100);
+
+                if (currentFilterStatus === 'active' && !hasSubmitted) continue;
+                if (currentFilterStatus === 'empty' && hasSubmitted) continue;
+                if (currentSearchQuery && !groupName.toLowerCase().includes(currentSearchQuery) && !members.toLowerCase().includes(currentSearchQuery)) continue;
+
+                const cardDiv = document.createElement('div');
+                cardDiv.className = "bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between space-y-4 hover:shadow-md transition";
+                cardDiv.innerHTML = `
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="px-3 py-1 bg-medical-50 text-medical-700 text-xs font-bold rounded-lg border border-medical-200">Kelompok ${i}</span>
+                            <span class="px-2.5 py-1 text-xs font-semibold rounded-full ${hasSubmitted ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">
+                                ${hasSubmitted ? 'Aktif Mengisi' : 'Menunggu'}
+                            </span>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-1">${groupName}</h3>
+                        <p class="text-xs text-slate-500 mb-3"><i class="fa-solid fa-user-group mr-1"></i> ${members}</p>
+                        
+                        <div class="space-y-2 text-xs text-slate-600 border-t border-slate-100 pt-3">
+                            <div class="flex justify-between">
+                                <span class="font-medium text-slate-400">Perwakilan:</span>
+                                <span class="font-semibold text-slate-700">${rep}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="font-medium text-slate-400">Pembaruan Terakhir:</span>
+                                <span class="font-mono text-slate-700">${updatedAt}</span>
+                            </div>
+                            <div class="flex justify-between items-center pt-1">
+                                <span class="font-medium text-slate-400">Progres LKPD:</span>
+                                <span class="font-bold text-medical-600">${progressPct}%</span>
+                            </div>
+                        </div>
+                        <div class="w-full bg-slate-100 h-1.5 rounded-full mt-2 overflow-hidden">
+                            <div class="bg-medical-600 h-full" style="width: ${progressPct}%"></div>
+                        </div>
+                    </div>
+                    <div class="pt-3 border-t border-slate-100 flex justify-end">
+                        <button onclick="viewGroupDetail(${i})" ${!hasSubmitted ? 'disabled' : ''} class="w-full py-2.5 px-4 ${hasSubmitted ? 'bg-medical-600 hover:bg-medical-700 text-white shadow-sm shadow-medical-500/20' : 'bg-slate-100 text-slate-400 cursor-not-allowed'} font-medium text-xs rounded-xl transition flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-eye"></i>
+                            <span>Lihat Hasil Lengkap</span>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(cardDiv);
+            }
+        }
+
+        function viewGroupDetail(groupNum) {
+            const data = allGroupsData[groupNum];
+            if (!data || !data.identity) {
+                showNotification('Kelompok ini belum mengisi data.', 'error');
+                return;
+            }
+
+            document.getElementById('modal-group-num').textContent = `Kelompok ${groupNum} (${data.identity.groupName})`;
+            document.getElementById('modal-group-name').textContent = data.identity.groupName;
+
+            const pt = data.physicalTest || {};
+            const an = data.analogy || {};
+
+            const contentDiv = document.getElementById('modal-group-content');
+            contentDiv.innerHTML = `
+                <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                    <h4 class="font-bold text-slate-900 border-b pb-2"><i class="fa-solid fa-id-card text-medical-600 mr-2"></i> 1. Identitas Kelompok</h4>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div><span class="text-slate-400">Nama Tim:</span> <span class="font-semibold">${data.identity.groupName}</span></div>
+                        <div><span class="text-slate-400">Nomor:</span> <span class="font-semibold">Kelompok ${data.identity.groupNumber}</span></div>
+                        <div><span class="text-slate-400">Anggota:</span> <span class="font-semibold">${data.identity.members}</span></div>
+                        <div><span class="text-slate-400">Perwakilan:</span> <span class="font-semibold">${data.identity.representative}</span></div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                    <h4 class="font-bold text-slate-900 border-b pb-2"><i class="fa-solid fa-clipboard-list text-medical-600 mr-2"></i> Fokus Pertanyaan Investigasi</h4>
+                    <p class="text-xs text-slate-700 font-semibold">${data.investigationQuestion || 'Belum dipilih'}</p>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                    <h4 class="font-bold text-slate-900 border-b pb-2"><i class="fa-solid fa-lightbulb text-amber-500 mr-2"></i> Dugaan Awal (Hipotesis)</h4>
+                    <p class="text-xs text-slate-700 italic">${data.hypothesis || 'Belum diisi'}</p>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                    <h4 class="font-bold text-slate-900 border-b pb-2"><i class="fa-solid fa-filter text-teal-600 mr-2"></i> 2. Data Hasil Uji Fisik Saringan</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs text-left">
+                            <tr class="bg-slate-100 font-semibold"><th class="p-2">Kondisi Saringan</th><th class="p-2">Kejernihan Cairan</th><th class="p-2">Partikel Tepung</th></tr>
+                            <tr class="border-b border-slate-100">
+                                <td class="p-2 font-medium">Saringan UTUH</td>
+                                <td class="p-2">${pt.utuhKejernihan || '-'}</td>
+                                <td class="p-2">${pt.utuhPartikel || '-'}</td>
+                            </tr>
+                            <tr class="border-b border-slate-100">
+                                <td class="p-2 font-medium">Saringan SOBEK</td>
+                                <td class="p-2">${pt.sobekKejernihan || '-'}</td>
+                                <td class="p-2">${pt.sobekPartikel || '-'}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="text-xs mt-2"><strong class="text-slate-400">Catatan Tambahan:</strong> ${pt.notes || '-'}</div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                    <h4 class="font-bold text-slate-900 border-b pb-2"><i class="fa-solid fa-shuffle text-indigo-600 mr-2"></i> Transformasi Analogi ke Konsep Biologi</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs text-left">
+                            <tr class="bg-slate-100 font-semibold"><th class="p-2">Elemen Simulasi</th><th class="p-2">Komponen Biologis Nyata</th></tr>
+                            <tr class="border-b border-slate-100"><td class="p-2 font-medium">Kertas saring</td><td class="p-2">${an.kertas || '-'}</td></tr>
+                            <tr class="border-b border-slate-100"><td class="p-2 font-medium">Partikel tepung</td><td class="p-2">${an.tepung || '-'}</td></tr>
+                            <tr class="border-b border-slate-100"><td class="p-2 font-medium">Air yang lolos</td><td class="p-2">${an.air || '-'}</td></tr>
+                            <tr class="border-b border-slate-100"><td class="p-2 font-medium">Saringan yang dilubangi</td><td class="p-2">${an.saringan || '-'}</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                    <h4 class="font-bold text-slate-900 border-b pb-2"><i class="fa-solid fa-flask text-emerald-600 mr-2"></i> 3. Data Hasil Analisis Rekam Medis</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs text-left">
+                            <tr class="bg-slate-100 font-semibold"><th class="p-2">Komponen</th><th class="p-2">Normal</th><th class="p-2">Hasil Pasien</th></tr>
+                            ${labComponents.map(c => `
+                                <tr class="border-b border-slate-100">
+                                    <td class="p-2 font-medium">${c.name}</td>
+                                    <td class="p-2 text-slate-400">${c.normal}</td>
+                                    <td class="p-2 font-semibold text-medical-700">${data.labAnalysis && data.labAnalysis[c.id] ? data.labAnalysis[c.id] : '-'}</td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                    <h4 class="font-bold text-slate-900 border-b pb-2"><i class="fa-solid fa-book-medical text-sky-600 mr-2"></i> 3. Pemilihan Sumber Literatur</h4>
+                    <div class="space-y-3">
+                        ${literatureCards.map(card => {
+                            const lit = data.literature && data.literature[card.id] ? data.literature[card.id] : {};
+                            return `
+                                <div class="p-3 bg-slate-50 rounded-lg text-xs space-y-1">
+                                    <div class="font-bold text-slate-800">${card.title} <span class="font-normal text-medical-600">(${lit.relevance || 'Belum dipilih'})</span></div>
+                                    <div><strong class="text-slate-400">Alasan:</strong> ${lit.reason || '-'}</div>
+                                    <div><strong class="text-slate-400">Info Penting:</strong> ${lit.info || '-'}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                    <h4 class="font-bold text-slate-900 border-b pb-2"><i class="fa-solid fa-clipboard-question text-indigo-600 mr-2"></i> 4. Pertanyaan Sintesis</h4>
+                    <div class="space-y-2 text-xs">
+                        ${data.synthesis ? Object.entries(data.synthesis).map(([k, v]) => `
+                            <div class="p-2.5 bg-slate-50 rounded-lg">
+                                <span class="font-bold text-slate-700 uppercase">${k}:</span>
+                                <p class="text-slate-600 mt-1">${v || 'Belum diisi'}</p>
+                            </div>
+                        `).join('') : '<p class="text-slate-400">Belum diisi</p>'}
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                    <h4 class="font-bold text-slate-900 border-b pb-2"><i class="fa-solid fa-circle-check text-purple-600 mr-2"></i> 5. Refleksi & Evaluasi</h4>
+                    <div class="text-xs space-y-1">
+                        <div><strong class="text-slate-400">Validasi Hipotesis:</strong> ${data.evaluation?.evalValidation || '-'}</div>
+                        <div><strong class="text-slate-400">Peran Aktif:</strong> ${data.evaluation?.roleActive || 'Ya'} (Anggota tidak aktif: ${data.evaluation?.inactiveMembers || 'Tidak ada'})</div>
+                        <div><strong class="text-slate-400">Kendala/Pertanyaan:</strong> ${data.evaluation?.studentDifficulties || 'Tidak ada'}</div>
+                    </div>
+                </div>
+                
+                <div class="pt-4 border-t border-slate-200 flex justify-start">
+                    <button onclick="deleteGroupSubmission(${groupNum})" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs rounded-xl transition flex items-center space-x-2 shadow-sm">
+                        <i class="fa-solid fa-trash-can"></i>
+                        <span>Hapus Tugas Kelompok Ini</span>
+                    </button>
+                </div>
+            `;
+
+            document.getElementById('teacher-detail-modal').classList.remove('hidden');
+        }
+
+        function deleteGroupSubmission(groupNum) {
+            localStorage.removeItem(`dmi_group_${groupNum}`);
+            
+            let master = JSON.parse(localStorage.getItem('dmi_master_groups') || '{}');
+            if (master[groupNum]) {
+                delete master[groupNum];
+                localStorage.setItem('dmi_master_groups', JSON.stringify(master));
+            }
+
+            allGroupsData[groupNum] = null;
+            if (currentActiveGroupNumber == groupNum) {
+                localStorage.removeItem('dmi_group_number');
+                currentActiveGroupNumber = null;
+                currentGroupData = {
+                    identity: { groupName: '', groupNumber: '', members: '', representative: '', date: new Date().toISOString().split('T')[0] },
+                    hypothesis: '',
+                    labAnalysis: {},
+                    literature: {},
+                    synthesis: {},
+                    evaluation: { evalValidation: '', roleActive: 'Ya', inactiveMembers: '', studentDifficulties: '' },
+                    updatedAt: null
+                };
+            }
+
+            closeTeacherDetailModal();
+            loadTeacherData();
+            showNotification(`Tugas Kelompok ${groupNum} berhasil dihapus.`, 'success');
+        }
+
+        function closeTeacherDetailModal() {
+            document.getElementById('teacher-detail-modal').classList.add('hidden');
+        }
+
+        function printGroupReport() {
+            window.print();
+        }
+
+        function downloadStudentPDF() {
+            showNotification('Sedang merender file PDF LKPD... Mohon tunggu sebentar.', 'success');
+            const element = document.getElementById('lkpd-workspace');
+            const groupName = currentGroupData.identity?.groupName || 'Kelompok';
+            const opt = {
+                margin:       10,
+                filename:     `LKPD_Misteri_Urine_Berbusa_${groupName.replace(/\s+/g, '_')}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().from(element).set(opt).save().then(() => {
+                showNotification('File PDF berhasil diunduh!', 'success');
+            }).catch(err => {
+                console.error(err);
+                showNotification('Gagal mengunduh PDF. Silakan coba lagi.', 'error');
+            });
+        }
+
+        function downloadTeacherPDF() {
+            showNotification('Sedang merender laporan PDF kelompok... Mohon tunggu sebentar.', 'success');
+            const element = document.getElementById('modal-group-content');
+            const groupTitle = document.getElementById('modal-group-num').textContent.replace(/[^a-zA-Z0-9]/g, '_');
+            const opt = {
+                margin:       10,
+                filename:     `Laporan_${groupTitle}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().from(element).set(opt).save().then(() => {
+                showNotification('Laporan PDF berhasil diunduh!', 'success');
+            }).catch(err => {
+                console.error(err);
+                showNotification('Gagal mengunduh PDF laporan.', 'error');
+            });
+        }
+    </script>
+</body>
+</html>
