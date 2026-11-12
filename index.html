@@ -986,11 +986,13 @@
                     { id: 'q1', text: '1. Zat apa yang seharusnya tertahan di darah tetapi ditemukan di urine Pak Jamal?' },
                     { id: 'q2', text: '2. Bagaimana saringan glomerulus bekerja pada kondisi normal, dan zat apa yang lolos atau tertahan?' }
                 ];
-            } else {
-                title.textContent = "PERTANYAAN SINTESIS – ANALISIS KASUS JAMAL";
-                subtitle.textContent = "Pilih nomor kelompok terlebih dahulu pada bagian identitas.";
-                container.innerHTML = `<p class="text-sm text-slate-500 italic p-4 bg-slate-50 rounded-xl">Silakan pilih nomor kelompok (1-4) di bagian atas untuk memunculkan pertanyaan sintesis yang sesuai.</p>`;
-                return;
+            } else if (groupNum === '4' || groupNum === '8') {
+                title.textContent = "PERTANYAAN SINTESIS – FOKUS 4";
+                subtitle.textContent = "Fokus: Analisis Urine Berbusa & Proteinuria Glomerulus";
+                questions = [
+                    { id: 'q1', text: '1. Hasil lab mana yang menunjukkan urine Pak Jamal berbeda dari urine normal, dan zat apa yang berlebih di sana?' },
+                    { id: 'q2', text: '2. Mengapa zat itu bisa membuat urine berbusa tebal dan bertahan lama?' },
+                    { id: 'q3', text: '3. Seharusnya zat itu berada di mana, dan bagian ginjal mana yang bertugas menahannya?' }
             }
 
             questions.forEach(q => {
